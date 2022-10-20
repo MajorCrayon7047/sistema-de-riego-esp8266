@@ -7,36 +7,36 @@
 #include <LittleFS.h>
 
 RTC_DS3231 rtc;
-
 int hora;
 int minutos;
+int dia;
 
-int bomba = 16;   //UNO: 6  Wemos: 12    NodeMCU: 15
-int circuito1 = 0;
-int circuito2 = 14;
-int circuito3 = 12;  //UNO: 9  Wemos: 2  NodeMCU: 12
-int goteo = 13;   //UNO: 10  Wemos: 15  NodeMCU: 13
+const int bomba = 16;   //UNO: 6  Wemos: 12    NodeMCU: 15
+const int circuito1 = 0;
+const int circuito2 = 14;
+const int circuito3 = 12;  //UNO: 9  Wemos: 2  NodeMCU: 12
+const int goteo = 13;   //UNO: 10  Wemos: 15  NodeMCU: 13
 
 void HTTP_handleRoot();              
-void HTTP_handleRoot();
+//void HTTP_handleRoot(); MANITO SI NO FUNCA ES CULPA DE ESTO
 
 //Tiempos de referencia para utilizar con la funcion millis() y poder contar tiempo de forma de no detener el procesador
 //son los tiempos de duracion de riego para cada circuito
 unsigned long ActualTime;
-unsigned long c1Time=240000;
+unsigned long c1Time=240000; 
 unsigned long c2Time=480000;
 unsigned long c3Time=720000;
 unsigned long gTime=1620000;
-unsigned long endTime=1621000;
+unsigned long endTime=1;
 
-//variables que tendran el resultado de la suma de ActualTime + X circuito
+//variables que tendran el resultado de la suma de ActualTime + duracion X circuito
 unsigned long c1TimeA;
 unsigned long c2TimeA;
 unsigned long c3TimeA;
 unsigned long gTimeA;
 unsigned long endTimeA;
 
-int contador = 1; //XD
+bool contador = 1; //XD NOTA MENTAL: SI FALLA PUEDE QUE SEA ESTO
 
 //string de llaves http
 String HT;
@@ -54,7 +54,6 @@ int c2s;
 int c3s;
 int gs;
 int rs;
-
 
 const char* ssid = "Flia Perez";
 const char* password = "ponecualquiera";
@@ -80,6 +79,10 @@ int h2[2] = {18, 00};
 int h3[2] = {04, 00};
 int h4[2] = {02, 00};
 
+//dias:
+bool days[7]= {true, true, true, true, true, true, true};
+// if (days[day]==true){XD}
+
 void ssd(){
   if (LittleFS.exists("/config.json") == true){
     File file = LittleFS.open("/config.json", "r");
@@ -99,6 +102,15 @@ void ssd(){
     h3[1] = json["h3"][1];
     h4[0] = json["h4"][0];
     h4[1] = json["h4"][1];
+
+    c1Time = json["duration"][0];
+    c2Time = json["duration"][1];
+    c3Time = json["duration"][2];
+    gTime = json["duration"][3];
+
+    for (int i = 0; i <= 6; i++){
+      days[i] = json["days"][i];
+    }
     file.close();
     }
 }
@@ -129,7 +141,7 @@ void setup() {
      //prende el server
      server.on ( "/", HTTP_handleRoot );
      //si no funciona el server
-     server.onNotFound ( HTTP_handleRoot );
+     server.onNotFound( HTTP_handleRoot );
      server.begin();
      pinMode(circuito1, OUTPUT);
      pinMode(circuito2, OUTPUT);
@@ -146,9 +158,6 @@ void setup() {
 
      ssd();
 }
-
-
-
 
 // Circuitos
 void circuito_1(){ 
@@ -229,8 +238,6 @@ void rutina(){
   ActualTime = millis();
     if (contador==1){
       c1TimeA = c1Time+ActualTime;
-      Serial.print("c1TimeA:");
-      Serial.println(c1TimeA);
       c2TimeA = c2Time+ActualTime;
       c3TimeA = c3Time+ActualTime;
       gTimeA = gTime+ActualTime;
@@ -282,28 +289,24 @@ void loop() {
     c3 = server.arg("c3");
     g = server.arg("g");
     rutine = server.arg("rutine");
-    rt=server.arg("r");
-    //Llamado de las funciones de control del auto
-    
-    if (c1 == "ON")circuito_1();
-    else if (c2 == "ON") circuito_2();
-    else if (c3 == "ON") circuito_3();
-    else if (g == "ON") goteo_();
-    else if (rutine == "ON")rutina();
+    rt = server.arg("r");
 
-  
-    //OFF
-    else if (c1 == "OFF" && c1s==0){ 
-      circuito_1OFF();
-      Serial.println(c1);
-      
-      }
+    if (c1 == "ON")circuito_1();
+    else if (c1 == "OFF" && c1s==0)circuito_1OFF();
+
+    if (c2 == "ON") circuito_2();
     else if (c2 == "OFF" && c2s==0) circuito_2OFF();
-    else if (c3 == "OFF" && c3s==0) circuito_3OFF();
-    else if (g == "OFF" && gs==0) goteo_OFF();
-    else if (rutine == "OFF" && rs==0) stop_all();
-    else if (rt == "ON"){Serial.println("AAA");}
     
+    if (c3 == "ON") circuito_3();
+    else if (c3 == "OFF" && c3s==0) circuito_3OFF();
+
+    if (g == "ON") goteo_();
+    else if (g == "OFF" && gs==0) goteo_OFF();
+
+    if (rutine == "ON")rutina();
+    else if (rutine == "OFF" && rs==0) stop_all();
+  
+
     else if (HT != ""){
       if (HT != HT2){
         HT2 = HT; 
@@ -320,60 +323,63 @@ void loop() {
         ssd();
       }
     }
-    
     //reloj
+    dia = now.dayOfTheWeek();
+    hora = now.hour();
+    minutos = now.minute();
+    //Serial.println(hora);
     //while(hora==7 && minutos==0 || hora==19 && minutos==0){
-    while(hora==h1[0] && minutos==h1[1] || hora==h2[0] && minutos==h2[1] || hora==h3[0] && minutos==h3[1] || hora==h4[0] && minutos==h4[1]){
-      ActualTime = millis();
-      
-      if (contador==1){
-        c1TimeA = c1Time+ActualTime;
-        Serial.print("c1TimeA:");
-        Serial.println(c1TimeA);
-        c2TimeA = c2Time+ActualTime;
-        c3TimeA = c3Time+ActualTime;
-        gTimeA = gTime+ActualTime;
-        contador=0;
+    if (days[dia] == true){
+      while(hora==h1[0] && minutos==h1[1] || hora==h2[0] && minutos==h2[1] || hora==h3[0] && minutos==h3[1] || hora==h4[0] && minutos==h4[1]){
+        ActualTime = millis();
+        
+        if (contador==1){
+          c1TimeA = c1Time+ActualTime;
+          Serial.print("c1TimeA:");
+          Serial.println(c1TimeA);
+          c2TimeA = c2Time+ActualTime;
+          c3TimeA = c3Time+ActualTime;
+          gTimeA = gTime+ActualTime;
+          contador=0;
+          }
+        
+        if(ActualTime<=c1TimeA){
+          Serial.println("Circuito 1 encendido");
+          digitalWrite(bomba, LOW);
+          digitalWrite(circuito1,LOW);
         }
-      
-      if(ActualTime<=c1TimeA){
-        Serial.println("Circuito 1 encendido");
-        digitalWrite(bomba, LOW);
-        digitalWrite(circuito1,LOW);
-      }
-      else if(ActualTime<=c2TimeA){
-        Serial.println("Circuito 1 apagado");
-        Serial.println("Circuito 2 encendido");
-        digitalWrite(circuito1, HIGH);
-        digitalWrite(circuito2, LOW);
-      }
-      else if(ActualTime<=c3TimeA){
-        Serial.println("Circuito 1 apagado");
-        Serial.println("Circuito 2 apagado");
-        Serial.println("Circuito 3 encendido");
-        digitalWrite(circuito2, HIGH);
-        digitalWrite(circuito3, LOW);
-      }
-      else if(ActualTime<=gTimeA){
-        Serial.println("Circuito 1 apagado");
-        Serial.println("Circuito 2 apagado");
-        Serial.println("Circuito 3 apagado");
-        Serial.println("GOTEO encendido");
-        digitalWrite(circuito3, HIGH);
-        digitalWrite(goteo, LOW); 
-      }
-      else if (ActualTime>endTimeA){
-        digitalWrite(bomba, HIGH);
-        digitalWrite(goteo, HIGH);
-        Serial.println("SE TERMINO LA RUTINA");
-        contador=1;
-        break;
-      }
+        else if(ActualTime<=c2TimeA){
+          Serial.println("Circuito 1 apagado");
+          Serial.println("Circuito 2 encendido");
+          digitalWrite(circuito1, HIGH);
+          digitalWrite(circuito2, LOW);
+        }
+        else if(ActualTime<=c3TimeA){
+          Serial.println("Circuito 1 apagado");
+          Serial.println("Circuito 2 apagado");
+          Serial.println("Circuito 3 encendido");
+          digitalWrite(circuito2, HIGH);
+          digitalWrite(circuito3, LOW);
+        }
+        else if(ActualTime<=gTimeA){
+          Serial.println("Circuito 1 apagado");
+          Serial.println("Circuito 2 apagado");
+          Serial.println("Circuito 3 apagado");
+          Serial.println("GOTEO encendido");
+          digitalWrite(circuito3, HIGH);
+          digitalWrite(goteo, LOW); 
+        }
+        else if (ActualTime>endTimeA){
+          digitalWrite(bomba, HIGH);
+          digitalWrite(goteo, HIGH);
+          Serial.println("SE TERMINO LA RUTINA");
+          contador=1;
+          break;
+        }
+    }
   }
 }
 void HTTP_handleRoot(void) {
-
-
   if( server.hasArg("c1") )
     {
        Serial.println(server.arg("c1"));
@@ -404,6 +410,5 @@ void HTTP_handleRoot(void) {
        Serial.println(server.arg("r"));
     }
   server.send ( 200, "text/html", "" );
-
   delay(1);
 }
