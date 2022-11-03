@@ -1,12 +1,14 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h> 
 #include <ESP8266WebServer.h>
-#include "RTClib.h"
+//#include "RTClib.h"
 #include <ArduinoJson.h>
 #include "FS.h"
 #include <LittleFS.h>
+#include <NTPClient.h>
+#include <WiFiUdp.h>
 
-RTC_DS3231 rtc;
+//RTC_DS3231 rtc;
 int hora;
 int minutos;
 int dia;
@@ -17,7 +19,7 @@ const int circuito2 = 14;
 const int circuito3 = 12;  //UNO: 9  Wemos: 2  NodeMCU: 12
 const int goteo = 13;   //UNO: 10  Wemos: 15  NodeMCU: 13
 
-void HTTP_handleRoot();              
+void HTTP_handleRoot();          
 //void HTTP_handleRoot(); MANITO SI NO FUNCA ES CULPA DE ESTO
 
 //Tiempos de referencia para utilizar con la funcion millis() y poder contar tiempo de forma de no detener el procesador
@@ -29,6 +31,8 @@ unsigned long c3Time=720000;
 unsigned long gTime=1620000;
 unsigned long endTime=1;
 
+unsigned long ultima=0;
+
 //variables que tendran el resultado de la suma de ActualTime + duracion X circuito
 unsigned long c1TimeA;
 unsigned long c2TimeA;
@@ -36,11 +40,11 @@ unsigned long c3TimeA;
 unsigned long gTimeA;
 unsigned long endTimeA;
 
-bool contador = 1; //XD NOTA MENTAL: SI FALLA PUEDE QUE SEA ESTO
-
+bool contador = 1; 
+bool contador2 = false;
 //string de llaves http
-String HT;
-String HT2;
+String JsonConfig;
+String JsonConfig2;
 String c1;
 String c2;
 String c3;
@@ -54,6 +58,10 @@ int c2s;
 int c3s;
 int gs;
 int rs;
+
+//UTC*60*60   -3*60*60  
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "south-america.pool.ntp.org");
 
 const char* ssid = "Flia Perez";
 const char* password = "ponecualquiera";
@@ -115,9 +123,10 @@ void ssd(){
     }
 }
 
+
 void setup() {
   Serial.begin(115200);
-  rtc.begin();
+  //rtc.begin();
   if(!LittleFS.begin()){
     Serial.println("An Error has occurred while mounting LittleFS");
     return;
@@ -140,6 +149,15 @@ void setup() {
  // Starting WEB-server 
      //prende el server
      server.on ( "/", HTTP_handleRoot );
+     server.on("/json", []() {
+        if (LittleFS.exists("/config.json") == true){
+          File file = LittleFS.open("/config.json", "r");
+          server.send(200, "text/plain", file.readString() );
+          Serial.println("YES");
+      }});
+     server.on("/live", [](){
+        server.send(200, "text/plain", "ALIVE");
+     });
      //si no funciona el server
      server.onNotFound( HTTP_handleRoot );
      server.begin();
@@ -155,7 +173,9 @@ void setup() {
      digitalWrite(circuito2,HIGH);
      digitalWrite(circuito3,HIGH);
      digitalWrite(goteo,HIGH);
-
+    
+     timeClient.begin();
+     timeClient.setTimeOffset(-10800);
      ssd();
 }
 
@@ -270,7 +290,7 @@ void rutina(){
       digitalWrite(circuito3, HIGH);
       digitalWrite(goteo, LOW); 
     }
-    else if (ActualTime>endTimeA){
+    else if ( ActualTime>endTimeA){
       digitalWrite(bomba, HIGH);
       digitalWrite(goteo, HIGH);
       Serial.println("SE TERMINO LA RUTINA");
@@ -281,9 +301,9 @@ void rutina(){
 void loop() {
     //inicia el server 
     server.handleClient();
-    DateTime now = rtc.now();
+    //DateTime now = rtc.now();
     //recoje la informacion enviada por la app
-    HT = server.arg("HT");
+    JsonConfig = server.arg("HT");
     c1 = server.arg("c1");
     c2 = server.arg("c2");
     c3 = server.arg("c3");
@@ -307,30 +327,42 @@ void loop() {
     else if (rutine == "OFF" && rs==0) stop_all();
   
 
-    else if (HT != ""){
-      if (HT != HT2){
-        HT2 = HT; 
-        Serial.println(HT);
+    else if (JsonConfig != ""){
+      if (JsonConfig != JsonConfig2){
+        JsonConfig2 = JsonConfig; 
+        Serial.println(JsonConfig);
         LittleFS.remove("/config.json");
         File file = LittleFS.open("/config.json", "w");
         if (!file){
           Serial.println("No funco");
           return;
         }
-        file.print(HT);
+        file.print(JsonConfig);
         delay(1);
         file.close();
-        ssd();
+        ESP.reset();
       }
     }
     //reloj
-    dia = now.dayOfTheWeek();
-    hora = now.hour();
-    minutos = now.minute();
-    //Serial.println(hora);
+    if (millis()>=ultima){
+    ultima = millis() + 500;
+    timeClient.update();
+    dia = timeClient.getDay();
+    hora = timeClient.getHours();
+    minutos = timeClient.getMinutes();
+    //Serial.print(dia);
+    //Serial.print("\t");
+    //Serial.print(hora);
+    //Serial.print(":");
+    //Serial.println(minutos);
+    }
     //while(hora==7 && minutos==0 || hora==19 && minutos==0){
     if (days[dia] == true){
-      while(hora==h1[0] && minutos==h1[1] || hora==h2[0] && minutos==h2[1] || hora==h3[0] && minutos==h3[1] || hora==h4[0] && minutos==h4[1]){
+    if (hora==h1[0] && minutos==h1[1] || hora==h2[0] && minutos==h2[1] || hora==h3[0] && minutos==h3[1] || hora==h4[0] && minutos==h4[1]){
+      contador2 = true;
+      }
+    }
+    if (contador2 == true){
         ActualTime = millis();
         
         if (contador==1){
@@ -342,10 +374,10 @@ void loop() {
           gTimeA = gTime+ActualTime;
           contador=0;
           }
-        
+        digitalWrite(bomba, LOW);
         if(ActualTime<=c1TimeA){
           Serial.println("Circuito 1 encendido");
-          digitalWrite(bomba, LOW);
+          
           digitalWrite(circuito1,LOW);
         }
         else if(ActualTime<=c2TimeA){
@@ -374,41 +406,11 @@ void loop() {
           digitalWrite(goteo, HIGH);
           Serial.println("SE TERMINO LA RUTINA");
           contador=1;
-          break;
+          contador2=false;
         }
     }
-  }
 }
 void HTTP_handleRoot(void) {
-  if( server.hasArg("c1") )
-    {
-       Serial.println(server.arg("c1"));
-    }
-
-
-  if( server.hasArg("c2") )
-    {
-       Serial.println(server.arg("c2"));
-    }
-
-
-  if( server.hasArg("c3") )
-    {
-       Serial.println(server.arg("c3"));
-    }
-
-  if( server.hasArg("g") )
-    {
-       Serial.println(server.arg("g"));
-    }
-  if( server.hasArg("rutine") )
-    {
-       Serial.println(server.arg("rutine"));
-    }
-  if( server.hasArg("r") )
-    {
-       Serial.println(server.arg("r"));
-    }
   server.send ( 200, "text/html", "" );
   delay(1);
 }
