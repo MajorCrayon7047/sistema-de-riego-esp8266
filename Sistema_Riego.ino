@@ -7,6 +7,7 @@
 #include <LittleFS.h>
 #include <NTPClient.h>
 #include <WiFiUdp.h>
+#include <ArduinoOTA.h>
 
 //RTC_DS3231 rtc;
 int hora;
@@ -19,8 +20,7 @@ const int circuito2 = 14;
 const int circuito3 = 12;  //UNO: 9  Wemos: 2  NodeMCU: 12
 const int goteo = 13;   //UNO: 10  Wemos: 15  NodeMCU: 13
 
-void HTTP_handleRoot();          
-//void HTTP_handleRoot(); MANITO SI NO FUNCA ES CULPA DE ESTO
+void HTTP_handleRoot();
 
 //Tiempos de referencia para utilizar con la funcion millis() y poder contar tiempo de forma de no detener el procesador
 //son los tiempos de duracion de riego para cada circuito
@@ -51,13 +51,14 @@ String c3;
 String g;
 String rutine;
 String rt;
-ESP8266WebServer server(80); //es la quinta vez
+String rt2;
+ESP8266WebServer server(80);
 
-int c1s;
-int c2s;
-int c3s;
-int gs;
-int rs;
+int c1s = 1;
+int c2s = 1;
+int c3s = 1;
+int gs = 1;
+int rs = 1;
 
 //UTC*60*60   -3*60*60  
 WiFiUDP ntpUDP;
@@ -145,38 +146,71 @@ void setup() {
 
   Serial.print("Conectado con éxito, mi IP es: ");
   Serial.println(WiFi.localIP());
- 
- // Starting WEB-server 
-     //prende el server
-     server.on ( "/", HTTP_handleRoot );
-     server.on("/json", []() {
-        if (LittleFS.exists("/config.json") == true){
-          File file = LittleFS.open("/config.json", "r");
-          server.send(200, "text/plain", file.readString() );
-          Serial.println("YES");
-      }});
-     server.on("/live", [](){
-        server.send(200, "text/plain", "ALIVE");
-     });
-     //si no funciona el server
-     server.onNotFound( HTTP_handleRoot );
-     server.begin();
-     pinMode(circuito1, OUTPUT);
-     pinMode(circuito2, OUTPUT);
-     pinMode(circuito3, OUTPUT);
-     pinMode(goteo, OUTPUT);
-     pinMode(bomba, OUTPUT);
+
+  ArduinoOTA.onStart([]() {
+    String type;
+    if (ArduinoOTA.getCommand() == U_FLASH) {
+      type = "sketch";
+    } else { // U_FS
+      type = "filesystem";
+    }
+
+    // NOTE: if updating FS this would be the place to unmount FS using FS.end()
     
-     //arrancar todo apagado:
-     digitalWrite(bomba,HIGH);
-     digitalWrite(circuito1,HIGH);
-     digitalWrite(circuito2,HIGH);
-     digitalWrite(circuito3,HIGH);
-     digitalWrite(goteo,HIGH);
-    
-     timeClient.begin();
-     timeClient.setTimeOffset(-10800);
-     ssd();
+    Serial.println("Start updating " + type);
+  });
+  ArduinoOTA.onEnd([]() {
+    Serial.println("\nEnd");
+  });
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+  });
+  ArduinoOTA.onError([](ota_error_t error) {
+    Serial.printf("Error[%u]: ", error);
+    if (error == OTA_AUTH_ERROR) {
+      Serial.println("Auth Failed");
+    } else if (error == OTA_BEGIN_ERROR) {
+      Serial.println("Begin Failed");
+    } else if (error == OTA_CONNECT_ERROR) {
+      Serial.println("Connect Failed");
+    } else if (error == OTA_RECEIVE_ERROR) {
+      Serial.println("Receive Failed");
+    } else if (error == OTA_END_ERROR) {
+      Serial.println("End Failed");
+    }
+  });
+  ArduinoOTA.begin();
+
+     //arrancando el server
+  server.on ( "/", HTTP_handleRoot );
+  server.on("/json", []() {
+    if (LittleFS.exists("/config.json") == true){
+      File file = LittleFS.open("/config.json", "r");
+      server.send(200, "text/plain", file.readString() );
+      Serial.println("YES");
+  }});
+  server.on("/live", [](){
+    server.send(200, "text/plain", "ALIVE");
+  });
+  //si no funciona el server
+  server.onNotFound( HTTP_handleRoot );
+  server.begin();
+  pinMode(circuito1, OUTPUT);
+  pinMode(circuito2, OUTPUT);
+  pinMode(circuito3, OUTPUT);
+  pinMode(goteo, OUTPUT);
+  pinMode(bomba, OUTPUT);
+
+  //arrancar todo apagado:
+  digitalWrite(bomba,HIGH);
+  digitalWrite(circuito1,HIGH);
+  digitalWrite(circuito2,HIGH);
+  digitalWrite(circuito3,HIGH);
+  digitalWrite(goteo,HIGH);
+
+  timeClient.begin();
+  timeClient.setTimeOffset(-10800);
+  ssd();
 }
 
 // Circuitos
@@ -209,7 +243,9 @@ void goteo_(){
 
 //OFF
 void circuito_1OFF(){ 
-  digitalWrite(bomba, HIGH);
+  if (gs == 1 && c2s == 1 && c3s == 1){
+    digitalWrite(bomba, HIGH);
+  }
   digitalWrite(circuito1,HIGH);
   Serial.println("CIRCUITO 1 APAGADO");
   c1="NADA";
@@ -218,7 +254,9 @@ void circuito_1OFF(){
   }
 
 void circuito_2OFF(){ 
-  digitalWrite(bomba, HIGH);
+  if (gs == 1 && c1s == 1 && c3s == 1){
+    digitalWrite(bomba, HIGH);
+  }
   digitalWrite(circuito2,HIGH);
   Serial.println("CIRCUITO 2 APAGADO");
   c2="NADA";
@@ -226,7 +264,9 @@ void circuito_2OFF(){
   }
 
 void circuito_3OFF(){ 
-  digitalWrite(bomba, HIGH);
+  if (gs == 1 && c1s == 1 && c2s == 1){
+    digitalWrite(bomba, HIGH);
+  }
   digitalWrite(circuito3,HIGH);
   Serial.println("CIRCUITO 3 APAGADO");
   c3="NADA";
@@ -234,7 +274,9 @@ void circuito_3OFF(){
   }
 
 void goteo_OFF(){ 
-  digitalWrite(bomba, HIGH);
+  if (c1s == 1 && c2s == 1 && c3s == 1){
+    digitalWrite(bomba, HIGH);
+  }
   digitalWrite(goteo,HIGH);
   Serial.println("GOTEO APAGADO");
   g="NADA";
@@ -254,97 +296,117 @@ void stop_all(){
  }
 
 void rutina(){
-  rs=0;
   ActualTime = millis();
-    if (contador==1){
-      c1TimeA = c1Time+ActualTime;
-      c2TimeA = c2Time+ActualTime;
-      c3TimeA = c3Time+ActualTime;
-      gTimeA = gTime+ActualTime;
-      contador=0;
-      }
-    
-    if(ActualTime<=c1TimeA){
-      Serial.println("Circuito 1 encendido");
+  rs = 0; 
+      if (contador==1){
+        c1TimeA = c1Time+ActualTime;
+        Serial.print("c1TimeA:");
+        Serial.println(c1TimeA);
+        c2TimeA = c2Time+ActualTime;
+        c3TimeA = c3Time+ActualTime;
+        gTimeA = gTime+ActualTime;
+        contador=0;
+        }
       digitalWrite(bomba, LOW);
-      digitalWrite(circuito1,LOW);
-    }
-    else if(ActualTime<=c2TimeA){
-      Serial.println("Circuito 1 apagado");
-      Serial.println("Circuito 2 encendido");
-      digitalWrite(circuito1, HIGH);
-      digitalWrite(circuito2, LOW);
-    }
-    else if(ActualTime<=c3TimeA){
-      Serial.println("Circuito 1 apagado");
-      Serial.println("Circuito 2 apagado");
-      Serial.println("Circuito 3 encendido");
-      digitalWrite(circuito2, HIGH);
-      digitalWrite(circuito3, LOW);
-    }
-    else if(ActualTime<=gTimeA){
-      Serial.println("Circuito 1 apagado");
-      Serial.println("Circuito 2 apagado");
-      Serial.println("Circuito 3 apagado");
-      Serial.println("GOTEO encendido");
-      digitalWrite(circuito3, HIGH);
-      digitalWrite(goteo, LOW); 
-    }
-    else if ( ActualTime>endTimeA){
-      digitalWrite(bomba, HIGH);
-      digitalWrite(goteo, HIGH);
-      Serial.println("SE TERMINO LA RUTINA");
-    }
+      if(ActualTime<=c1TimeA){
+        Serial.println("Circuito 1 encendido");
+        
+        digitalWrite(circuito1,LOW);
+      }
+      else if(ActualTime<=c2TimeA){
+        Serial.println("Circuito 1 apagado");
+        Serial.println("Circuito 2 encendido");
+        digitalWrite(circuito1, HIGH);
+        digitalWrite(circuito2, LOW);
+      }
+      else if(ActualTime<=c3TimeA){
+        Serial.println("Circuito 1 apagado");
+        Serial.println("Circuito 2 apagado");
+        Serial.println("Circuito 3 encendido");
+        digitalWrite(circuito2, HIGH);
+        digitalWrite(circuito3, LOW);
+      }
+      else if(ActualTime<=gTimeA){
+        Serial.println("Circuito 1 apagado");
+        Serial.println("Circuito 2 apagado");
+        Serial.println("Circuito 3 apagado");
+        Serial.println("GOTEO encendido");
+        digitalWrite(circuito3, HIGH);
+        digitalWrite(goteo, LOW); 
+      }
+      else if (ActualTime>endTimeA){
+        digitalWrite(bomba, HIGH);
+        digitalWrite(goteo, HIGH);
+        Serial.println("SE TERMINO LA RUTINA");
+        contador=1;
+        contador2=false;
+        rs = 1;
+      }
 }
 
   
 void loop() {
-    //inicia el server 
-    server.handleClient();
-    //DateTime now = rtc.now();
-    //recoje la informacion enviada por la app
-    JsonConfig = server.arg("HT");
-    c1 = server.arg("c1");
-    c2 = server.arg("c2");
-    c3 = server.arg("c3");
-    g = server.arg("g");
-    rutine = server.arg("rutine");
-    rt = server.arg("r");
+  ArduinoOTA.handle();
+  //inicia el server 
+  server.handleClient();
+  //DateTime now = rtc.now();
+  //recoje la informacion enviada por la app
+  JsonConfig = server.arg("HT");
+  c1 = server.arg("c1");
+  c2 = server.arg("c2");
+  c3 = server.arg("c3");
+  g = server.arg("g");
+  rutine = server.arg("rutine");
+  rt = server.arg("r");
 
-    if (c1 == "ON")circuito_1();
-    else if (c1 == "OFF" && c1s==0)circuito_1OFF();
+  if (c1 == "ON")circuito_1();
+  else if (c1 == "OFF" && c1s==0)circuito_1OFF();
 
-    if (c2 == "ON") circuito_2();
-    else if (c2 == "OFF" && c2s==0) circuito_2OFF();
-    
-    if (c3 == "ON") circuito_3();
-    else if (c3 == "OFF" && c3s==0) circuito_3OFF();
-
-    if (g == "ON") goteo_();
-    else if (g == "OFF" && gs==0) goteo_OFF();
-
-    if (rutine == "ON")rutina();
-    else if (rutine == "OFF" && rs==0) stop_all();
+  if (c2 == "ON") circuito_2();
+  else if (c2 == "OFF" && c2s==0) circuito_2OFF();
   
+  if (c3 == "ON") circuito_3();
+  else if (c3 == "OFF" && c3s==0) circuito_3OFF();
 
-    else if (JsonConfig != ""){
-      if (JsonConfig != JsonConfig2){
-        JsonConfig2 = JsonConfig; 
-        Serial.println(JsonConfig);
-        LittleFS.remove("/config.json");
-        File file = LittleFS.open("/config.json", "w");
-        if (!file){
-          Serial.println("No funco");
-          return;
-        }
-        file.print(JsonConfig);
-        delay(1);
-        file.close();
-        ESP.reset();
-      }
+  if (g == "ON") goteo_();
+  else if (g == "OFF" && gs==0) goteo_OFF();
+
+  if (rutine == "ON"){contador2 = true;}
+  else if (rutine == "OFF") {
+    stop_all();
+    contador2 = false;
     }
-    //reloj
-    if (millis()>=ultima){
+/*
+  if (rt =! ""){
+    if (rt =! rt2){
+      rt = rt2;
+      digitalWrite(bomba, HIGH);
+      digitalWrite(circuito1, HIGH);
+      digitalWrite(circuito2, HIGH);
+      digitalWrite(circuito3, HIGH);
+      digitalWrite(goteo, HIGH);
+      contador2 = false;
+    }
+  }
+*/
+  else if (JsonConfig != ""){
+    if (JsonConfig != JsonConfig2){
+      JsonConfig2 = JsonConfig; 
+      Serial.println(JsonConfig);
+      LittleFS.remove("/config.json");
+      File file = LittleFS.open("/config.json", "w");
+      if (!file){
+        Serial.println("No funco");
+        return;
+      }
+      file.print(JsonConfig);
+      delay(1);
+      file.close();
+      ESP.reset();
+    }
+  }
+  //reloj
+  if (millis()>=ultima){
     ultima = millis() + 500;
     timeClient.update();
     dia = timeClient.getDay();
@@ -355,61 +417,16 @@ void loop() {
     //Serial.print(hora);
     //Serial.print(":");
     //Serial.println(minutos);
+  }
+  //while(hora==7 && minutos==0 || hora==19 && minutos==0){
+  if (days[dia] == true){
+  if (hora==h1[0] && minutos==h1[1] || hora==h2[0] && minutos==h2[1] || hora==h3[0] && minutos==h3[1] || hora==h4[0] && minutos==h4[1]){
+    contador2 = true;
     }
-    //while(hora==7 && minutos==0 || hora==19 && minutos==0){
-    if (days[dia] == true){
-    if (hora==h1[0] && minutos==h1[1] || hora==h2[0] && minutos==h2[1] || hora==h3[0] && minutos==h3[1] || hora==h4[0] && minutos==h4[1]){
-      contador2 = true;
-      }
-    }
-    if (contador2 == true){
-        ActualTime = millis();
-        
-        if (contador==1){
-          c1TimeA = c1Time+ActualTime;
-          Serial.print("c1TimeA:");
-          Serial.println(c1TimeA);
-          c2TimeA = c2Time+ActualTime;
-          c3TimeA = c3Time+ActualTime;
-          gTimeA = gTime+ActualTime;
-          contador=0;
-          }
-        digitalWrite(bomba, LOW);
-        if(ActualTime<=c1TimeA){
-          Serial.println("Circuito 1 encendido");
-          
-          digitalWrite(circuito1,LOW);
-        }
-        else if(ActualTime<=c2TimeA){
-          Serial.println("Circuito 1 apagado");
-          Serial.println("Circuito 2 encendido");
-          digitalWrite(circuito1, HIGH);
-          digitalWrite(circuito2, LOW);
-        }
-        else if(ActualTime<=c3TimeA){
-          Serial.println("Circuito 1 apagado");
-          Serial.println("Circuito 2 apagado");
-          Serial.println("Circuito 3 encendido");
-          digitalWrite(circuito2, HIGH);
-          digitalWrite(circuito3, LOW);
-        }
-        else if(ActualTime<=gTimeA){
-          Serial.println("Circuito 1 apagado");
-          Serial.println("Circuito 2 apagado");
-          Serial.println("Circuito 3 apagado");
-          Serial.println("GOTEO encendido");
-          digitalWrite(circuito3, HIGH);
-          digitalWrite(goteo, LOW); 
-        }
-        else if (ActualTime>endTimeA){
-          digitalWrite(bomba, HIGH);
-          digitalWrite(goteo, HIGH);
-          Serial.println("SE TERMINO LA RUTINA");
-          contador=1;
-          contador2=false;
-        }
-    }
+  }
+  if (contador2 == true){rutina();}
 }
+
 void HTTP_handleRoot(void) {
   server.send ( 200, "text/html", "" );
   delay(1);
