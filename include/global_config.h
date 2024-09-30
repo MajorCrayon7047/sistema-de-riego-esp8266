@@ -1,5 +1,5 @@
-#ifndef CONFIG_H
-#define CONFIG_H
+#ifndef GLOBAL_CONFIG_H
+#define GLOBAL_CONFIG_H
 
 #include <Arduino.h>
 #include <IPAddress.h>
@@ -13,7 +13,6 @@ extern const uint8_t AMOUNT_OF_VALVES;
 extern uint8_t hydraulicPump;
 
 //global routine stuff
-extern bool routineAuto, routineState;
 extern const char* CONFIG_PATH;
 extern const char* DEFAULT_ROUTINE_CONFIG;
 
@@ -31,4 +30,4 @@ extern IPAddress secundaryDNS;
 // globales o se usan en multiples archivos (sino cada vez que en un archivo se llame a
 //este header se redeclaran los variables)
 
-#endif
+#endif //GLOBAL_CONFIG_H

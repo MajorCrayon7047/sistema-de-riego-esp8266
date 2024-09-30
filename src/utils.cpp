@@ -1,4 +1,7 @@
 #include <LittleFS.h>
+#include <Arduino.h>
+#include "utils.h"
+#include "global_config.h"
 
 void initFS(void){
     Serial.println("Iniciando LittleFS");
@@ -19,13 +22,37 @@ bool updateFile(const char* dir, const String* data){
     File file = LittleFS.open(dir, "w");
     if(!file) return false;
     file.print(*data);
+    file.close();
     Serial.println("Se guardaron los siguientes datos: " + *data);
     return true;
 }
+
 bool updateFile(const char* dir, const char* data){
     File file = LittleFS.open(dir, "w");
     if(!file) return false;
-    file.print(data);
+    file.print(*data);      // ! Capaz el poner el * genere un error
+    file.close();
     Serial.println("Se guardaron los siguientes datos: " + *data);
     return true;
+}
+
+String readFile(const char* dir){
+    File file = LittleFS.open(dir, "r");
+    if(!file) {
+        Serial.println("Error abriendo el archivo");
+        return "";
+    }
+    String fileContent = file.readString();
+    file.close();
+    return fileContent;
+}
+
+void updatePins(bool onlyCheck){
+    bool somethingIsOn = false;
+    for(uint_fast8_t pin = 0; pin < AMOUNT_OF_VALVES; pin++){
+        if(!onlyCheck) digitalWrite(electroValves[pin].valveGPIO, electroValves[pin].valveState);
+        if(electroValves[pin].valveState) somethingIsOn = true;
+    }
+    if(somethingIsOn) digitalWrite(hydraulicPump, true);
+    else digitalWrite(hydraulicPump, false);
 }

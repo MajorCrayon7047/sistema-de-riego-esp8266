@@ -1,8 +1,13 @@
+#ifndef SERVER_HANDLER_H
+#define SERVER_HANDLER_H
+
 #include <ESP8266WebServer.h>
-#include <ArduinoJson.h>
 
-ESP8266WebServer server;
+extern ESP8266WebServer HTTP_server;
 
-bool requestHandler(ESP8266WebServer* server, int8_t *errorType);
+void initServer(void);
+bool requestHandler(ESP8266WebServer* HTTP_server, int8_t *errorType);
 void HTTP_handleRoot(void);
 void HTTP_handleConfig(void);
+
+#endif // SERVER_HANDLER_H

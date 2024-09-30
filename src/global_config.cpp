@@ -5,7 +5,6 @@ const uint8_t AMOUNT_OF_VALVES = sizeof(electroValves)/sizeof(electroValves[0]);
 uint8_t hydraulicPump = 10;
 
 //routine stuff
-bool routineAuto = false, routineState = false;
 const char* CONFIG_PATH = "/config.json";
 const char* DEFAULT_ROUTINE_CONFIG = "{'duration':[0,0,0,0], 'days' : [false, false, false, false, false, false, false], 'horarios' : [ [99,99], [99,99], [99,99], [99,99] ]}";
 
