@@ -23,15 +23,15 @@ class Task {
         void calcNextTime(void);
 
     public:
-        Task(TaskFunction callbackFunction, unsigned long interval, int iterations, bool enabled = false, TaskFunction onEnable = nullptr, TaskFunction onDisable = nullptr);
+        Task(TaskFunction callbackFunction, unsigned long intervalInMS, int iterations, bool enabled = false, TaskFunction onEnable = nullptr, TaskFunction onDisable = nullptr);
         bool isLastIteration(void);
         int getInterval(void);
         int getCurrentIteration(void);
         int isFinished(void);
         bool isEnabled(void);
-        void setOnEnable( TaskFunction onEnable );
-        void setOnDisable( TaskFunction onDisable );
-        void setInterval(unsigned long interval);
+        void setOnEnable( TaskFunction onEnable = nullptr );
+        void setOnDisable( TaskFunction onDisable = nullptr );
+        void setInterval(unsigned long intervalInMS);
         void setIterations(int iterations);
         void enable(void);
         void enableIfNot(void);

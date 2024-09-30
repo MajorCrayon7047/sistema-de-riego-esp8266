@@ -10,9 +10,13 @@ Routine::Routine() {
     this->numberOfPins = AMOUNT_OF_VALVES - 1;
     this->routineAuto = false;
     this->routineState = false;
+
+    this->time = new MultiTimeHandler(60000);
 }
 
-void Routine::initConfig(){
+void Routine::begin(){
+    time->begin();
+    
     routineTask->setOnEnable([this]() { this->routineOnEnable(); });
     routineTask->setOnDisable([this]() { this->routineOnDisable(); });
 
@@ -56,7 +60,7 @@ bool Routine::loadConfig(bool autoModeState) {
 
 void Routine::routineHandler() {
     Serial.printf("\nCurrent Pin: %d", currentPin);
-    Serial.printf("\nEjecutando el intervalo: %lu", routineTask->getCurrentIteration());
+    Serial.printf("\nEjecutando el intervalo: %u", routineTask->getCurrentIteration());
     if(currentPin > 0) electroValves[currentPin-1].valveState = false;
     if(currentPin > 0) Serial.printf("\nApagando el pin %d", electroValves[currentPin-1].valveGPIO);
     if(routineTask->isLastIteration()){
@@ -90,9 +94,10 @@ void Routine::routineOnDisable(){
 void Routine::handler() {
     routineTask->handler();
     if(routineAuto){
-        int hora = 98, minuto = 98, dayOfTheWeek = 0;
+        time->update(); //se actualiza el tiempo cada minuto
+
         for(uint_fast8_t i = 0; i < AMOUNT_OF_VALVES; i++){
-            if((configRutina["horarios"][i][0].as<int>() == hora)  && (configRutina["horarios"][i][1].as<int>() == minuto) && configRutina["days"][dayOfTheWeek].as<bool>() && !routineState){
+            if((configRutina["horarios"][i][0].as<int>() == time->hour)  && (configRutina["horarios"][i][1].as<int>() == time->minute) && ( (time->dayOfTheWeek != 99) ? configRutina["days"][time->dayOfTheWeek].as<bool>() : false ) && !routineState){
                 routineState = true;    //Este if se encarga de habilitar la rutina segun los horarios
                 routineTask->enableIfNot();
             }

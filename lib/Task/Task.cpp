@@ -1,9 +1,9 @@
 #include "Task.h"
 #include <Arduino.h>
 
-Task::Task(TaskFunction callbackFunction, unsigned long interval, int iterations, bool enabled, TaskFunction onEnable, TaskFunction onDisable){
+Task::Task(TaskFunction callbackFunction, unsigned long intervalInMS, int iterations, bool enabled, TaskFunction onEnable, TaskFunction onDisable){     //Constructor. Si se incializa con 0 iteraciones se convierte en una tarea infinita
     this->callbackFunction = callbackFunction;
-    this->interval = interval;
+    this->interval = intervalInMS;
     this->maxIterations = iterations;
     this->onEnable = onEnable;
     this->enabled = enabled;
@@ -39,8 +39,8 @@ void Task::setOnEnable( TaskFunction onEnable ){
     this->onEnable = onEnable;
 }
 
-void Task::setInterval(unsigned long interval){
-    this->interval = interval;
+void Task::setInterval(unsigned long intervalInMS){
+    this->interval = intervalInMS;
 }
 
 void Task::setIterations(int iterations){
@@ -60,6 +60,7 @@ void Task::enableIfNot(){
 }
 
 void Task::disable(){
+    if(onDisable != nullptr) onDisable();
     enabled = false;
     finished = true;
     currentIteration = 0;
