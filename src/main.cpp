@@ -4,29 +4,28 @@
 #include "global_config.h"
 #include "utils.h"
 #include "wifi_handler.h"
-#include "server_handler_class.h"
-#include "routine_class.h"
+#include "ServerHandler.h"
+#include "Routine.h"
 
-Scheduler taskHandler;
-Routine routine(&taskHandler);
+Routine routine;
 ServerHandler serverHandler(&routine);
 
 void setup() {
     Serial.begin(115200);
-
     delay(1000);
 
     initFS();
-    initWifi();
+    //initWifi();
     serverHandler.initServer();
+    routine.initConfig();
 
     //Pritty print for Serial console
     Serial.print("\n\n                      ............                      \n                ........................                \n             ..............................             \n          ............::::.:::::::............          \n        .........:=**%  :=-=-=+*- .....:........        \n      ..........=*:.+% =#*%*===+@=   .-:..........      \n     ...........+++=%::.  .:==#%#.     :...........     \n    .............:#-   .... .. .*@-    .:............   \n   ...............:  ..+%@%*: .: :%*     ::......:....  \n  ...............:.  :-@@@@@@= .   *#      ....:=.....  \n ..............:.   :..%@@@@@=  :   **       .::....... \n ............::     .   :==-..:. -   #:   --:.......... \n............:.      .:=+*##%%@% .@@+:-@@#=--............\n...........:.   .::#@@@@@@@@@@@+@@@@@@@@*-..............\n..........:. :::...:%@@@@@@@@@@@%%@*=---=:..............\n.........:-::.......:@@**@@@@@.   -.....................\n ........::.............#@%%%@##%@-.................... \n .................::=:.:#@%%%@%%%@-.................... \n  ............:---:*@@:.-%@@#:::...==-................  \n  ...........:-:::#@@%%@%%%%=    -#-::==-:............  \n   .......=++-:::#%@%%%%%%%@= .=%%-::::::==::........   \n     ...-+%+::::*==#%%%%@%+:+#@@%-::::::-+++++++=..     \n      :=++#::::#. %=+%#+--*%*==%-::::::-+++++**+*.      \n       :+*::::*.  .%%=+++:   :#-:::::::++++*#+++-       \n         .:::*:  =*+:+%.    -#::::::::***+#*+=:         \n            -= =-.+ .--@-  =*::::::::*@@%@*-.           \n              . +%=.:@+.=-++::::::::-@@#=:      |Powered by: MajorCrayon7047            \n                   : -*#+**::::::.....          |Proyect Name: Controlador de Riego\n");
+    routine.enable();   // ! para pruebas
 }
 
 void loop(){
-    wifiKeepAlive();
-    serverHandler.handleClient();
-    routine.executeTaskHandler();
-    routine.autoRoutineHandler();
+    //wifiKeepAlive();
+    //serverHandler.handleClient();
+    routine.handler();
 }

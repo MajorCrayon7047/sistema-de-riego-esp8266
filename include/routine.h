@@ -1,25 +1,30 @@
-#ifndef ROUTINE_H
-#define ROUTINE_H
 
-#include <Arduino.h>
+#ifndef ROUTINE_CLASS_H
+#define ROUTINE_CLASS_H
+
+#include "Task.h"
 #include <ArduinoJson.h>
-#include <TaskScheduler.h>
 
-extern JsonDocument configRutina;
-extern uint8_t currentPin, numberOfPins;
-extern Scheduler taskHandler;
-extern Task routineHandlerTask;
-extern bool routineAuto, routineState;
+class Routine {
+    private:
+        Task* routineTask;
+        uint8_t currentPin, numberOfPins;
 
-void initRoutineConfig(void);
-bool loadRoutineConfig(bool autoModeState = false);
-void routineHandler(void);
-bool routineOnEnable(void);
-void routineOnDisable(void);
-void autoRoutineHandler(void);
-void enableRoutine(void);
-void disableRoutine(void);
-void executeTaskHandler(void);
+        void routineHandler(void);
+        void routineOnEnable(void);
+        void routineOnDisable(void);
 
+    public:
+        bool routineAuto, routineState;
+        JsonDocument configRutina;
 
-#endif // ROUTINE_H
+        Routine();
+        void initConfig(void);
+        bool loadConfig(bool autoModeState = false);
+        
+        void enable(void);
+        void disable(void);
+        void handler(void);
+};
+
+#endif // ROUTINE_CLASS_H

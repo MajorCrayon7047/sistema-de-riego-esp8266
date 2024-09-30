@@ -1,4 +1,4 @@
-#include "server_handler_class.h"
+#include "ServerHandler.h"
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -6,7 +6,6 @@
 
 #include "global_config.h"
 #include "utils.h"
-#include "routine_class.h"
 
 ServerHandler::ServerHandler(Routine* routine) {
     ESP8266WebServer HTTP_server(80);
@@ -65,7 +64,7 @@ bool ServerHandler::requestHandler(int8_t* errorType) {
             }
             updatePins(false);
             routine->routineState = doc[AMOUNT_OF_VALVES].as<bool>();
-            routine->routineState ? routine->enableRoutine() : routine->disableRoutine();
+            routine->routineState ? routine->enable() : routine->disable();
         }
 
         else if (HTTP_server.argName(i) == "routineState") {
@@ -75,7 +74,7 @@ bool ServerHandler::requestHandler(int8_t* errorType) {
 
         else if (HTTP_server.argName(i) == "data") {
             errorFile = (!updateFile(CONFIG_PATH, &HTTP_server.arg(i))) || errorFile;
-            routine->loadRoutineConfig(false);
+            routine->loadConfig(false);
         }
     }
 
