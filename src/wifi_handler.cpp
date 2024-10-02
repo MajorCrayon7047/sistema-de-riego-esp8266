@@ -30,7 +30,7 @@ void wifiKeepAlive(){
     WiFi.begin( ssid, password );
     while( WiFi.status() != WL_CONNECTED ) {
         tries++;
-        Serial.println( "|" );
+        Serial.print( "|" );
         if ( tries == 500 ) ESP.reset();
         delay( 50 );
     }

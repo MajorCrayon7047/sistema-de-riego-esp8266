@@ -15,6 +15,7 @@ extern uint8_t hydraulicPump;
 //global routine stuff
 extern const char* CONFIG_PATH;
 extern const char* DEFAULT_ROUTINE_CONFIG;
+extern const char* ROUTINE_ENABLE_PATH;
 
 //wifi stuff
 extern const char* ssid;

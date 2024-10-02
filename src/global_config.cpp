@@ -5,8 +5,9 @@ const uint8_t AMOUNT_OF_VALVES = sizeof(electroValves)/sizeof(electroValves[0]);
 uint8_t hydraulicPump = 10;
 
 //routine stuff
-const char* CONFIG_PATH = "/config.json";
-const char* DEFAULT_ROUTINE_CONFIG = "{'duration':[0,0,0,0], 'days' : [false, false, false, false, false, false, false], 'horarios' : [ [99,99], [99,99], [99,99], [99,99] ]}";
+const char* CONFIG_PATH = "/routine_config.json";
+const char* DEFAULT_ROUTINE_CONFIG = "{\"duration\":[0,0,0,0],\"days\":[false,false,false,falsee,false,false,false],\"horarios\":[[99,99],[99,99],[99,99],[99,99]]}";
+const char* ROUTINE_ENABLE_PATH = "/routine.txt";
 
 //wifi stuff
 const char* ssid = "Flia Perez";

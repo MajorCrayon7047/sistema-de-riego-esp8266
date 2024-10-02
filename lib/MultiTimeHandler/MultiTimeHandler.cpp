@@ -3,7 +3,8 @@
 
 // Constructor de la clase MultiTimeHandler
 MultiTimeHandler::MultiTimeHandler(unsigned long updateInterval_MS) 
-    : timeClient(ntpUDP, "pool.ntp.org", 3600 * (-3)) { // Inicializa el cliente NTP con la zona horaria UTC-3
+    :   ntpUDP(),                                           // Inicializa ntpUDP primero
+        timeClient(ntpUDP, "pool.ntp.org", (3600 * (-3))) { // Inicializa el cliente NTP con la zona horaria UTC-3
     // Crea una tarea para actualizar el tiempo a intervalos regulares
     this->updateTimeTask = new Task([this]() { this->getTime(); }, updateInterval_MS, 0);
     this->hour = 99;                    // Inicializa la hora a un valor no válido
@@ -43,8 +44,7 @@ void MultiTimeHandler::setUpdateInterval(unsigned long updateInterval_MS){
 
 // Método para obtener el tiempo actual
 void MultiTimeHandler::getTime(){
-    ntptimeIsNotWorking = !timeClient.forceUpdate();    // Fuerza una actualización del tiempo NTP
-    if(!ntptimeIsNotWorking && rtcIsNotWorking){        // Si el NTP funciona y el RTC no, obtiene el tiempo del NTP
+    if(timeClient.forceUpdate() && rtcIsNotWorking){        // Si el NTP funciona y el RTC no, obtiene el tiempo del NTP
         hour = timeClient.getHours();
         minute = timeClient.getMinutes();
         dayOfTheWeek = timeClient.getDay();             // 0 es Domingo
@@ -60,6 +60,7 @@ void MultiTimeHandler::getTime(){
         minute = now.minute();
         dayOfTheWeek = now.dayOfTheWeek();
     }
+    Serial.printf(" %s Time: %02d:%02d, Day: %d\n", rtcIsNotWorking? "NTP" : "RTC", hour, minute, dayOfTheWeek);    // ! debug
 }
 
 // Método para actualizar la tarea de tiempo

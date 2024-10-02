@@ -2,6 +2,8 @@
 #include "global_config.h"
 #include "utils.h"
 
+//TODO: Implementar un sistema de LOG
+
 // Constructor de la clase Routine
 Routine::Routine() {
     // Inicializa la tarea de la rutina con un handler y un intervalo
@@ -47,9 +49,12 @@ void Routine::disable(){
 bool Routine::loadConfig(bool autoModeState) {
     const char* falso = "false";
     // Verifica si los archivos de configuración existen, si no, los crea con valores por defecto
-    if(!doFileExists("routine.txt")) updateFile("routine.txt", falso);
+    if(!doFileExists(ROUTINE_ENABLE_PATH)) updateFile(ROUTINE_ENABLE_PATH, falso);
     if(!doFileExists(CONFIG_PATH)) updateFile(CONFIG_PATH, DEFAULT_ROUTINE_CONFIG);
-    
+    //TODO: arreglar el que por alguna razon DEFAULT_ROUTINE_CONFIG se guarda como "{" en vez de su valor default correcto
+    //TODO: agregar routine.txt a global_config.h
+    //Serial.println(DEFAULT_ROUTINE_CONFIG);
+
     // Lee el contenido del archivo de configuración
     String fileContent = readFile(!autoModeState ? CONFIG_PATH : "routine.txt");
     if(fileContent == "") return false;
@@ -58,8 +63,9 @@ bool Routine::loadConfig(bool autoModeState) {
     if(!autoModeState){
         DeserializationError error =  deserializeJson(configRutina, fileContent);
         if(error){
-            Serial.println("Error cargando la configuracion default");
-            Serial.println(error.c_str());
+            Serial.printf("Error cargando la configuracion default, el error es: %s\n", error.c_str());
+            Serial.printf("El contenido del archivo %s es: ", !autoModeState ? CONFIG_PATH : ROUTINE_ENABLE_PATH);
+            Serial.print(fileContent + "\n");
             return false;
         }
     }
@@ -113,7 +119,8 @@ void Routine::routineOnDisable(){
 // Handler principal que se llama periódicamente
 void Routine::handler() {
     routineTask->handler();
-    
+    time->update();             // ! quitar mas tarde (prueba)
+
     // Si la rutina está en modo automático, actualiza el tiempo y verifica los horarios
     if(routineAuto){
         time->update();                 // Se actualiza el tiempo cada minuto

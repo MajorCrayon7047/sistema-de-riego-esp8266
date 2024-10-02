@@ -12,6 +12,8 @@ void initFS(void){
         tries++;
         if(tries == 10) ESP.restart();
     }
+    if(LittleFS.format()) Serial.println("Se formateo la memoria correctamente");
+    else Serial.println("No se pudo formatear la memoria");
 }
 
 bool doFileExists(const char* dir){
@@ -39,7 +41,7 @@ bool updateFile(const char* dir, const char* data){
 String readFile(const char* dir){
     File file = LittleFS.open(dir, "r");
     if(!file) {
-        Serial.println("Error abriendo el archivo");
+        Serial.println("Error abriendo el archivo, en el directorio: " + String(dir));
         return "";
     }
     String fileContent = file.readString();
