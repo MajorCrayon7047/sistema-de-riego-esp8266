@@ -5,8 +5,9 @@
 
 //FS utils
 void initFS(void);
-bool doFileExists(const char* dir);
-bool updateFile(const char* dir, const String* data);
+bool doFileExists(const char& dir);
+bool doFileExists(const String& dir);
+bool updateFile(const char* dir, const String& data);
 bool updateFile(const char* dir, const char* data);
 String readFile(const char* dir);
 

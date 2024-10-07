@@ -68,12 +68,12 @@ bool ServerHandler::requestHandler(int8_t* errorType) {
         }
 
         else if (HTTP_server.argName(i) == "routineState") {
-            errorFile = (!updateFile("/routine.txt", &HTTP_server.arg(i))) || errorFile;
+            errorFile = (!updateFile("/routine.txt", HTTP_server.arg(i))) || errorFile;
             routine->routineAuto = HTTP_server.arg(i) == "true" || HTTP_server.arg(i) == "1";
         }
 
         else if (HTTP_server.argName(i) == "data") {
-            errorFile = (!updateFile(CONFIG_PATH, &HTTP_server.arg(i))) || errorFile;
+            errorFile = (!updateFile(CONFIG_PATH, HTTP_server.arg(i))) || errorFile;
             routine->loadConfig(false);
         }
     }

@@ -120,11 +120,9 @@ void Routine::routineOnDisable(){
 void Routine::handler() {
     routineTask->handler();
     time->update();             // ! quitar mas tarde (prueba)
-
     // Si la rutina está en modo automático, actualiza el tiempo y verifica los horarios
     if(routineAuto){
         time->update();                 // Se actualiza el tiempo cada minuto
-
         // Verifica si es hora de habilitar la rutina según la configuración
         for(uint_fast8_t i = 0; i < AMOUNT_OF_VALVES; i++){
             if((configRutina["horarios"][i][0].as<int>() == time->hour)  && 

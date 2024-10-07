@@ -50,9 +50,19 @@ void MultiTimeHandler::getTime(){
         dayOfTheWeek = timeClient.getDay();             // 0 es Domingo
     }
     else if(rtcIsNotWorking){                           // Si ninguno funciona, establece valores no válidos
-        hour = 99;
-        minute = 99;
-        dayOfTheWeek = 99;
+        if(hour != 99 && minute!= 99 && dayOfTheWeek != 99){
+            minute = (minute + 1) % 60;
+            if(minute == 0) hour = (hour + 1) % 24;
+            if(hour == 23 && minute == 59){
+                dayOfTheWeek = (dayOfTheWeek + 1) % 7;
+                hour == 0;
+            }
+        }
+        else{
+            hour = 99;
+            minute = 99;
+            dayOfTheWeek = 99;
+        }
     }
     else{                                               // Si el RTC funciona, obtiene el tiempo del RTC
         now = rtc.now();
